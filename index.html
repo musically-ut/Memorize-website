@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>RedQueen Demo</title>
+  <title>Memorize</title>
 
   <!-- MathJax configuration must come before MathJAX is loaded even if async -->
   <script type="text/x-mathjax-config">
@@ -14,10 +14,7 @@
   </script>
 
   <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_SVG" async></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.1/fetch.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.4.0/d3.min.js"></script>
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pure/0.6.2/buttons.css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
   <link rel="stylesheet" href="css/tufte.css">
@@ -35,227 +32,166 @@
 
    <img src="img/red_queen.512.png" alt="RedQueen"
        aria="hidden" class="red-queen-icon" />
-    <h1 class="red-queen">
-        RedQueen
+    <h1 class="memorize">
+        Memorize
     </h1>
 
     <p class="subtitle">
-      An Online Algorithm for Smart Broadcasting in Social Networks
+      An optimal algorithm for spaced repetition
     </p>
+    <!--
     <ul class="subtitle">
       <li>Presented at <a href="http://www.wsdm-conference.org/2017/">WSDM, 2017</a>;</li>
       <li>Full paper at <a href="https://arxiv.org/abs/1610.05773">arxiv.org/abs/1610.05773</a>;</li>
       <li>Source code at <a href="https://github.com/Networks-Learning/RedQueen"><i class="fa fa-github"></i>Networks-Learning/RedQueen</a></li>
     </ul>
+    -->
 
     <section>
       <h2>Introduction</h2>
 
       <p>
-        User attention is becoming a sparse commodity. This is evinced by the
-        proliferation of studies which point to information overload or to the
-        plethora of articles proclaiming to recommend when to post your messages
-        to maximise the probability of your followers reacting to the post.
-        <!-- Can give references here -->
+        It is <a href="https://www.gwern.net/Spaced\%20repetition">well known</a> that
+        repeated and spaced reviews of knowledge is necessary for improving
+        retention.
+        However, it is unclear what is the best schedule for reviews is. Several
+        heuristics have been suggested, but they lack guarantees of optimality.
+          <label class="margin-toggle sidenote-number" for="sn-reviewing"></label>
+          <input id="sn-reviewing" class="margin-toggle" type="checkbox">
+          <span class="sidenote">
+            See [TODO REFERENCES].
+          </span>
+
+        In this work, we will describe a way of coming up with an optimal
+        scheduling algorithm which we name <div class="memorize">Memorize</div>.
+      </p>
+
+      <h2>Problem setup</h2>
+
+      <p>
+        Let us consider the problem of learning <em>one</em> knowledge item.
+        We assume that we know how <em>difficult</em> learning the item is.
+          <label class="margin-toggle sidenote-number" for="sn-item-difficulty"></label>
+          <input id="sn-item-difficulty" class="margin-toggle" type="checkbox">
+          <span class="sidenote">
+            We will formalize these parameters later. These parameters
+            can be estimated from a dataset of learning traces.
+            Depending on the size of the dataset, these parameters can be
+            user-specific, item-specific, or even user-item specific.
+          </span>
+        Our algorithm will determine the next-reviewing time. The learner will
+        be <em>tested</em> at that time to see if he can recall the item and we
+        will update our next-reviewing time based on that information.
       </p>
 
       <p>
-        We will look at <span class="us">a broadcaster</span> who wants his
-        posts to gain more attention on the feed of one follower and see how he
-        can regulate his posting to do that.
+        The objective of the algorithm is to keep the recall of the item high
+        during the experiment duration \( (0, T] \) while minimizing the total
+        number of reviews that the learner has to do.
       </p>
 
-      <h2>Feeds in social media</h2>
+      <h3>Memory models</h3>
       <p>
-        Feeds in social media display posts of all <em>followees</em> of the
-        user (the follower) in some order. However, the follower does not pay
-        equal attention to all posts. Instead, more attention is given to the
-        posts on top of the feed while the posts which disappear <em>underneath
-          the fold</em> are given little attention.
+        Before we can start talking about scheduling, we need a model of human
+        memory, which can help us predict how humans forget. There are are
+        multiple models of memory which can predict the probability of recall
+        at time \( t \) given the past reviews of the item and its
+        <em>difficulty</em>.
 
-        <label class="margin-toggle sidenote-number" for="sn-overload-citation"></label>
-        <input id="sn-overload-citation" class="margin-toggle" type="checkbox">
-        <span class="sidenote">
-          See <a href="http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0098914">Leveraging Position Bias to Improve Peer Recommendation</a>, <a href="https://arxiv.org/abs/1605.02660">Information is not a Virus, and Other Consequences of Human Cognitive Limits</a>, <a href="https://people.mpi-sws.org/~manuelgr/pubs/efficiency-wsdm16.pdf">On the Efficiency of the Information Networks in Social Media</a>
-        </span>
+          <label class="margin-toggle sidenote-number" for="sn-memory-model"></label>
+          <input id="sn-memory-model" class="margin-toggle" type="checkbox">
+          <span class="sidenote">
+            See [TODO REFERENCES for ACT-R, MCM, Exponential, Ebbinghaus].
+          </span>
       </p>
 
       <p>
-        Let us define the rank \( r(t) \) as the position of the <em>first</em>
-        post by the broadcaster on the follower's feed. It is a measure of
-        visibility of the broadcasters post. One way of seeking the follower's
-        attention is to minimize the rank \( r(t) \).
+        We will assume that the probability of recall follows the analytically
+        simple exponential decay model. In our paper, we have extended the
+        analysis to more widely accepted power-law decay model of memory as
+        well.
       </p>
 
-      <figure>
-        <label class="margin-toggle" for="feed-figure">⊕</label>
-        <input id="feed-figure" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          Feed of a follower contains posts broadcast by several sources,
-          including <span class="us">our broadcaster</span>, i.e. the source
-          we are interested in helping to remain at the top.
-        </span>
-        <img src="img/when-to-post-problem-demo.svg" alt="When to post problem" class="full-width">
-      </figure>
-
-        <!--
-        <label class="margin-toggle" for="fig-redqueen">⊕</label>
-        <input id="fig-redqueen" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          <svg viewBox="0 0 100 150" id="example-feed" class="margin content"></svg>
-          A bursty feed of a follower with the rank of the users.
-        </span>
-        -->
-
       <p>
-        In order to minimize the rank, we first need to understand how it evolves.
-        If the feeds are sorted by the time of the post, with most recent posts appearing on top, then the dynamics of the rank \( r(t) \) of the <span class="us">broadcaster</span> in the feed can be modeled using the following equation:
-        <label class="margin-toggle" for="generalize-rank-algo">⊕</label>
-        <input id="generalize-rank-algo" class="margin-toggle" type="checkbox">
+        In the exponential decay model of memory, we assume that probability of
+        recall \( m(t) \) of an item immediate after a review is \( 1 \). Then,
+        as the name suggests, the probability of recall \( m(t) \) decays
+        exponentially with a forgetting rate \( n(t) \), which depends on the
+        past reviews and the item difficulty:
+
         $$
-        r(t+dt) = \left\{
-          \begin{array}{ccccl}
-          & (r(t)+1) & {\color{other} dM(t)} & {\color{us} (1-dN(t))} & {\color{other} \text{Others post}}\\
-          + & 0 & {\color{other}(1 - dM(t))} & {\color{us} dN(t)} & {\color{us} \text{Our broadcaster posts}}\\
-          + & r(t) & {\color{other} (1 - dM(t))} & {\color{us} (1- dN(t))} & \text{No-one posts}
-          \end{array}
-          \right.
+        m(t) = e^{-n(t)(t - t_r)}
         $$
 
-        where \( {\color{other} dM(t)}, {\color{us} dN(t)} \in \{0, 1\} \) denote the presence or absence of a
-        <em>broadcast</em> in the respective point process at time \( t \).
-        <span class="marginnote">
-          Our method can generalize to any ordering of
-          posts as long as we can reverse-engineer the algorithm and write out
-          the dynamics of \( r(t) \).
-        </span>
-      </p>
+        Our estimate of the forgetting rate is adapted to be higher or lower
+        depending on whether the learner managed to recall the item at a
+        review or not:
 
-      <p>
-        The evolution of \( \color{us} N(t) \) is under the control of <span class="us">the broadcaster</span>,
-        whereas the \( \color{other} M(t) \) may behave in various ways:
-      </p>
+        $$
+        n(t + dt) = \begin{cases}
+        (1 - \alpha) \times n(t) & \text{if item was recalled}\\
+        (1 + \beta) \times n(t) & \text{if item was forgotten}
+        \end{cases}
+        $$
 
-      <ul>
-        <li>It may be nearly constant (e.g. large number of diverse followees)</li>
-        <li>It may have bursts (e.g. breaking news posts)</li>
-        <li>It may be piecewise constant with some period (e.g. most followees
-          are from a particular time zones)</li>
-        <li>\( \ldots \)</li>
-      </ul>
-
-      <p>
-        <label class="margin-toggle" for="karimi-assumption">⊕</label>
-        <input id="karimi-assumption" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          <a href="http://www.kdd.org/kdd2016/subtopic/view/smart-broadcasting-do-you-want-to-be-seen">
-            Karimi et. al.
-          </a> assume that the broadcasting frequency of
-          <span class="other">other broadcasters</span> is piecewise constant.
-        </span>
-
-        Thanks to our novel formulation of the problem, our solution
-        <span class="red-queen">RedQueen</span> is able to handle all of these
-        cases, <em>without needing to perform any model inference using historical data for \( \color{other} M(t) \)</em>.
+        \( \alpha \) and \( \beta \), as well as the initial difficulty \( n(0)
+        \),  are parameters of the model which are derived from the dataset
+        using Stochastic Gradient Decent using
+        <a href="https://github.com/duolingo/halflife-regression">Halflife regression.</a>
       </p>
 
       <h2>Methodology</h2>
 
       <p>
-        Given the dynamics of the rank and of <span class="others">other broadcasters</span>,
-        as stochastic jump differential equations, we can attempt to find the optimal rate
-        of posting for <span class="us">the broadcaster</span> \( u(t) \) by formulating it
-        as a variable in an <a href="https://en.wikipedia.org/wiki/Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation#Extension_to_stochastic_problems">stochastic control problem</a>.
-        However, before that, we have to choose a loss function which we will
-        aim to optimize for.
+        Contrary to the previous approaches which directly produce the optimal
+        time to review either by discretizing time into fixed slots (e.g. hours
+        or days) or by using a <em>thresholding</em> based strategy (which schedules
+        review just when the recall probability is about to fall under a threshold),
+        we produce the optimal <em>rate</em> of reviewing.
       </p>
 
       <p>
-        We choose the following loss function:
+        This will allow us to formulate the problem as a <a href="shttps://en.wikipedia.org/wiki/Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation#Extension_to_stochastic_problems">stochastic control problem.</a>
+        However, before that, we have to choose a loss function.
+      </p>
 
-        <label class="margin-toggle" for="generalize-multiple-followers">⊕</label>
-        <input id="generalize-multiple-followers" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          This objective can be generalized for multiple followers. For details,
-          see <a href="https://arxiv.org/abs/1610.05773">our paper</a>.
-        </span>
-
-        <!--
-        $$
-          \begin{align}
-          \underset{u(t_0, t_f]}{\text{minimize}} &
-              \quad \mathbb{E}_{(N, M)(t_0, t_f]}\left[
-                \phi(r(t_f)) + \int_{t_0}^{t_f} \ell(r(\tau), u(\tau)) d\tau
-              \right] \\
-          \text{subject to} & \quad u(t) \geq 0 \quad \forall t \in (t_0, t_f]
-          \end{align}
-        $$
-
-        <span class="marginnote">
-          This is a common way to formulate problems for <a href="https://en.wikipedia.org/wiki/Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation#Extension_to_stochastic_problems">solving stochastic control problems</a>.
-        </span>
-        -->
+      <p>
+        We choose the following loss function
 
         $$
           \begin{align}
-          \underset{u(t_0, t_f]}{\text{minimize}} &
-          \quad \mathbb{E}_{({\color{us} N}, {\color{other} M})(t_0, t_f]}\left[
-                \int_{t_0}^{t_f} \left( \frac{1}{2} s \,r^2(\tau) + \frac{1}{2} q\,u^2(\tau) \right) d\tau
+          \underset{u(0, T]}{\text{minimize}} &
+          \quad \mathbb{E}_{\text{reviewing times}}\left[
+                \int_{0}^{T} \left( \,(1 - m(t))^2(\tau) + \frac{1}{2} q\,u^2(\tau) \right) d\tau
               \right] \\
-          \text{subject to} & \quad u(t) \geq 0 \quad \forall t \in (t_0, t_f]
+          \text{subject to} & \quad u(t) \geq 0 \quad \forall t \in (0, T]
           \end{align}
         $$
+
+        This loss penalizes high probability of forgetting \( 1 - m(t) \) as well
+        as high review rates \( \frac{1}{2} q\,u^2(t) \), with \( q \) acting
+        as a parameter to trade off between these objectives.
       </p>
 
       <p>
-        <label class="margin-toggle" for="karimi-loss">⊕</label>
-        <input id="karimi-loss" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          Karimi et. al. optimize for <em>Time spent in top-k</em>, wherein, they find the
-          rates which maximize the time the broadcaster's posts spend with \( r(t) \lt k \).
-          In <a href="https://arxiv.org/abs/1610.05773">our paper</a>, we show
-          that our approach, though optimizing for a different loss function,
-          still outperforms the offline method.
-        </span>
-
-        This function penalizes high ranks \( \frac{1}{2} s \,r^2(t) \)
-        as well as posting with high frequency \( \frac{1}{2} q\,u^2(t) \), with
-        tunable weights \( s \) and \( q \) to trade off between them.
+        We integrate the this loss function over the experiment interval
+        \( [0, T] \) and, since the future is stochastic, we attempt
+        to find the reviewing rate \( u(t) \) for the item which minimizes the
+        expectation of the integral.
       </p>
 
       <p>
-        We integrate the this loss function over the desired interval
-        \( [ t_0, t_j ] \) and, since the future is stochastic, we attempt
-        to find the posting rate \( u(t) \) of <span class="us">the broadcaster</span>
-        which minimizes the expectation of the integral.
-      </p>
-
-      <!--
-      <p>
-        The \( s \) and the \( q \) denote the relative penalty of
-        the rank we obtain and the amount of broadcasting we do.
-
-        <label class="margin-toggle" for="generalize-significance">⊕</label>
-        <input id="generalize-significance" class="margin-toggle" type="checkbox">
-        <span class="marginnote">The term \( s \) can be made a function of time, i.e. \( s(t) \), to
-          change the <em>significance</em> of obtaining a high rank at time \( t \).
-          Also, in case of multiple followers, the term \( s \) can be a vector, which can be used
-          to weigh the ranks of the broadcaster on different follower's feeds differently.
-          For details, see <a href="https://arxiv.org/abs/1610.05773">our paper</a>.
-        </span>
-
-      </p>
-      -->
-
-      <p>
-        With this choice of the loss function, the optimization problem can be solved analytically by formulating the optimal cost-to-go, deriving a PDE using the <a href="https://en.wikipedia.org/w/index.php?title=Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation&wteswitched=1">Hamilton-Jacobi-Bellman equation</a> and then solving it.
+        With this choice of the loss function, the optimization problem can be
+        solved analytically by formulating the optimal cost-to-go, deriving a
+        PDE using the <a href="https://en.wikipedia.org/w/index.php?title=Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation&wteswitched=1">Hamilton-Jacobi-Bellman equation</a>
+        and then solving it.
       </p>
 
       <p>
         Finally, on solving the PDE, we arrive at the following elegant solution:
 
         $$
-        \overbrace{u(t)}^{\text{broadcast intensity}} = \sqrt{s/q}\,\underbrace{r(t)}_{\text{Rank in feed}}
+        \overbrace{u(t)}^{\text{reviewing intensity}} = \sqrt{1/q}\,\underbrace{(1 - m(t))}_{\text{Prob. of forgetting}}
         $$
       </p>
 
