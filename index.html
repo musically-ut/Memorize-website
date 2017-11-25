@@ -62,7 +62,7 @@
           <label class="margin-toggle sidenote-number" for="sn-reviewing"></label>
           <input id="sn-reviewing" class="margin-toggle" type="checkbox">
           <span class="sidenote">
-            See [TODO REFERENCES].
+            See <a href="https://www.ncbi.nlm.nih.gov/pubmed/24444515">Lindsey et al</a>, <a href="https://papers.nips.cc/paper/3731-predicting-the-optimal-spacing-of-study-a-multiscale-context-model-of-memory">Pashler et al.</a>, <a href="http://psycnet.apa.org/record/2009-01320-009">Metzler-Baddeley et al.</a>, <a href="https://www.ncbi.nlm.nih.gov/pubmed/18590367">Pavlik et al</a>, <a href="https://arxiv.org/abs/1602.07032">Reddy et al.</a>, etc.
           </span>
 
         In this work, we will describe a way of coming up with an optimal
@@ -104,7 +104,7 @@
           <label class="margin-toggle sidenote-number" for="sn-memory-model"></label>
           <input id="sn-memory-model" class="margin-toggle" type="checkbox">
           <span class="sidenote">
-            See [TODO REFERENCES for ACT-R, MCM, Exponential, Ebbinghaus].
+            See <a href="http://act-r.psy.cmu.edu/">ACT-R</a>, <a href="https://papers.nips.cc/paper/3731-predicting-the-optimal-spacing-of-study-a-multiscale-context-model-of-memory">Multiscale Context Model (MCM)</a>, <a href="https://public.psych.iastate.edu/shacarp/Wixted_Carpenter_2007.pdf">Power-law</a>, etc.
           </span>
       </p>
 
@@ -123,8 +123,13 @@
         past reviews and the item difficulty:
 
         $$
-        m(t) = e^{-n(t)(t - t_r)}
+        m(t) = e^{-n(t)(t - t_{\text{last review}})}
         $$
+        <label class="margin-toggle" for="sn-power-law">⊕</label>
+        <input id="sn-power-law" class="margin-toggle" type="checkbox">
+        <span class="sidenote">
+          The power-law decay model is \( m(t) = A(1 + B(t - t_{\text{last review}}))^{-n(t)} \)
+        </span>
 
         Our estimate of the forgetting rate is adapted to be higher or lower
         depending on whether the learner managed to recall the item at a
