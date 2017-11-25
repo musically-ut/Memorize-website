@@ -30,7 +30,7 @@
       $$
     </div>
 
-   <img src="img/red_queen.512.png" alt="RedQueen"
+   <img src="img/memorize.512.png" alt="RedQueen"
        aria="hidden" class="red-queen-icon" />
     <h1 class="memorize">
         Memorize
@@ -63,7 +63,7 @@
           </span>
 
         In this work, we will describe a way of coming up with an optimal
-        scheduling algorithm which we name <div class="memorize">Memorize</div>.
+        scheduling algorithm which we name <span class="memorize">Memorize</span>.
       </p>
 
       <h2>Problem setup</h2>
@@ -136,7 +136,7 @@
 
         \( \alpha \) and \( \beta \), as well as the initial difficulty \( n(0)
         \),  are parameters of the model which are derived from the dataset
-        using Stochastic Gradient Decent using
+        using a variant of
         <a href="https://github.com/duolingo/halflife-regression">Halflife regression.</a>
       </p>
 
@@ -161,21 +161,21 @@
         $$
           \begin{align}
           \underset{u(0, T]}{\text{minimize}} &
-          \quad \mathbb{E}_{\text{reviewing times}}\left[
-                \int_{0}^{T} \left( \,(1 - m(t))^2(\tau) + \frac{1}{2} q\,u^2(\tau) \right) d\tau
+          \quad \mathbb{E}_{ \{ \text{reviewing times} \} }\left[
+                \int_{0}^{T} \left( \,(1 - m(\tau))^2 + \frac{1}{2} q\,u^2(\tau) \right) d\tau
               \right] \\
           \text{subject to} & \quad u(t) \geq 0 \quad \forall t \in (0, T]
           \end{align}
         $$
 
-        This loss penalizes high probability of forgetting \( 1 - m(t) \) as well
+        This loss penalizes high probability of forgetting \( (1 - m(t))^2 \) as well
         as high review rates \( \frac{1}{2} q\,u^2(t) \), with \( q \) acting
-        as a parameter to trade off between these objectives.
+        as a tunable parameter to trade off between these objectives.
       </p>
 
       <p>
         We integrate the this loss function over the experiment interval
-        \( [0, T] \) and, since the future is stochastic, we attempt
+        \( [0, T] \) and, since the reviewing times are stochastic, we attempt
         to find the reviewing rate \( u(t) \) for the item which minimizes the
         expectation of the integral.
       </p>
@@ -191,174 +191,63 @@
         Finally, on solving the PDE, we arrive at the following elegant solution:
 
         $$
-        \overbrace{u(t)}^{\text{reviewing intensity}} = \sqrt{1/q}\,\underbrace{(1 - m(t))}_{\text{Prob. of forgetting}}
+        \overbrace{u(t)}^{\text{reviewing intensity}} = q^{-\frac{1}{2}}\,\underbrace{(1 - m(t))}_{\text{Prob. of forgetting}}
         $$
       </p>
 
       <p>
-        This function states that the rate at which <span class="us">the broadcaster</span> must post messages (i.e. the <em>urgency</em> of posting), should be proportional to how <em>bad</em> his rank \( r(t) \) is.
-        Hence, he will have to post <em>faster</em> to stay where he originally was (i.e. at the top).
+        This function states that the rate at which the item must be reviewed
+        (i.e. the <em>urgency</em> of reviewing), should be proportional to how
+        <em>close</em> the learner is about to forgetting that item. Hence, the
+        <em>urgency</em> to review increases as the learner gets closer to
+        forgetting it. If the user remembers the item perfectly, i.e.
+        \( m(t) = 1 \), the rate at which reviews will happen will be 0, i.e.
+        no reviews will be scheduled.
+
+        Similarly, if the user has completely forgotten the item, i.e.
+        \( m(t) = 0 \), the learner will see review events with rate
+        \( q^{-\frac{1}{2}} \) per unit of time.
       </p>
 
       <p>
-        Determining the rate requires only knowing the rank of
-        <span class="us">the broadcaster</span> on the feed(s) of his follower(s).
-        This information can be calculated in \( \mathcal{O}(1) \) time, given
-        the stream of posts from <span class="other">other broadcasters</span>,
-        the sampling, as shown <a href="#sampling">below</a>, too takes only
-        \( \mathcal{O}(1) \) time, making this an efficient online algorithm
-        for determining when-to-post.
+        Note that this is different from scheduling a review
+        after the probability of recall hits a certain threshold. That is a
+        deterministic heuristic policy which attempts to prevent the probability
+        of recall from falling below a threshold. Our policy, on the other hand,
+        is stochastic in nature and is provably optimal for our loss function.
       </p>
 
-      <h2 id="sampling">From <em>rate-of-posting</em> to <em>when-to-post</em></h2>
+      <h3 id="sampling">From <em>rate-of-reviewing</em> to <em>next-review-time</em></h3>
 
       <p>
-        <!--
-        <label class="margin-toggle" for="eqn-user-rate">⊕</label>
-        <input id="eqn-user-rate" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-        </span>
-        -->
-
-        Now that we know how <span class="us">the broadcaster</span> should
-        regulate his messages, we have to determine when exactly should the next post be made.
+        Now that we know the rate at which the item should be reviewed, we have
+        to determine when exactly should the next post be made. This can be done
+        easily using
+        <a href="https://en.wikipedia.org/wiki/Poisson_point_process#Thinning"><em>thinning</em> of Poisson process</a>
+        because we know what the maximum reviewing intensity is, i.e. \( q^{-\frac{1}{2}} \).
       </p>
-
-      <p>First, notice that \( u(t) \) changes only when \( r(t) \) changes and in steps of size \( \sqrt{{s}/{q}} \).</p>
-
-      <p>
-        Thanks to the superposition property of Poisson point processes
-        we can treat each <em>jump</em> in \( u(t) \) as the start of a new Poisson process.
-      </p>
-
-      <figure>
-        <label class="margin-toggle" for="superposition">⊕</label>
-        <input id="superposition" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          The process \( u(t) \) can be seen as a super-position of multiple
-          Poisson processes starting at the times the rank \( r(t) \) changes,
-          i.e. when <span class="other">other broadcasters</span> post
-          messages.
-        </span>
-        <img src="img/superposition.svg"
-             alt="u(t) is superposition of multiple point processes"
-             class="centered width-75">
-      </figure>
-
-      <p>
-        Now to draw the time of first event for \( u(t) \), i.e. when
-        <span class="us">our broadcaster</span> posts, we can draw samples
-        from all point processes and take the minimum.
-      </p>
-
-      <figure>
-        <label class="margin-toggle" for="sampling-note">⊕</label>
-        <input id="sampling-note" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          Since \( u(t) \) is a sum of several independent Poisson processes,
-          the first event which occurs according to it is the earliest of the
-          first events of each of its components.
-        </span>
-        <img src="img/sampling.svg"
-              alt="sampling u(t) involves taking the minimum of all samples for individual processes"
-              class="centered width-75">
-      </figure>
-
-      <p>
-        Since drawing one sample is an \( \mathcal{O}(1) \) operation, and we
-        draw one sample each time <span class="other">other broadcasters</span>
-        post, we only have to take \( \mathcal{O}(M(t_f)) \) samples.
-      </p>
-
-      <h2>Demo</h2>
-
-      <p>Choose the metric you would like to see and press the <code>Play</code> button to start the demo.</p>
-
-      <p class="metric-control">
-        <span class="js-option option">
-          <input id="avg_rank" type="radio" name="performance_metric" value="avg_rank" checked class="js-perf-metric">
-          <label for="avg_rank">Rank \( r(t) \)</label>
-        </span>
-        <span class="js-option option">
-          <input id="time_at_top" type="radio" name="performance_metric" value="time_at_top" class="js-perf-metric">
-          <label for="time_at_top">Time at top \( \int_{0}^{t} \mathbb{I}(r(\tau) \lt 1)\, d\tau \)</label>
-        </span>
-      </p>
-
-
-
-      <p class="pure-button-group centered sans" role="group" aria-label="interactive buttons">
-        <button class="small pure-button button-play js-play">
-          <i class="fa fa-play"></i> Play
-        </button>
-        <button class="small pure-button button-stop js-stop">
-          <i class="fa fa-stop"></i> Stop
-        </button>
-      </p>
-
-      <figure>
-        <label class="margin-toggle" for="redqueen-demo-caption">⊕</label>
-        <input id="redqueen-demo-caption" class="margin-toggle" type="checkbox">
-        <span class="marginnote">
-          Interactive demo showing the performance (i.e. \( r(t) \)) of
-          <span class="red-queen">RedQueen</span> against a Poisson broadcaster
-          (who posts at random times) against a bursty stream of tweets coming
-          from other broadcasters.
-        </span>
-
-        <div class="long vis-aspect">
-          <svg id="perf-1-vis" width="100%" class="content" viewBox="0 0 300 100"></svg>
-        </div>
-
-        <div class="long vis-aspect">
-          <svg id="perf-2-vis" width="100%" class="content" viewBox="0 0 300 100"></svg>
-        </div>
-
-        <div class="equal-size">
-          <div class="tall left vis-aspect">
-            <svg class="content" id="feed-1-vis" viewBox="0 0 100 150"></svg>
-          </div>
-          <div class="tall right vis-aspect">
-            <svg id="feed-2-vis" class="content" viewBox="0 0 100 150"></svg>
-          </div>
-        </div>
-      </figure>
 
       <h2>More details</h2>
 
       <p>
-        <a href="https://arxiv.org/abs/1610.05773">Our paper</a> contains a mathematical description of <span class="red-queen">RedQueen</span>,
-        and several extensions including, but not limited to:
+        <a href="TBD">Our paper</a> contains a mathematical description of <span class="memorize">Memorize</span>,
+        and several extensions:
       </p>
 
       <ul>
-        <li>Comparison against an Oracle and the state of the art and saw that our algorithm fared favourably.</li>
-        <li>Extension to handle multiple users and to handle time varying weights for followers.</li>
-        <li>Testing under <em>truthful what-if</em> conditions by playing back tweets on falls of followers of over 2000 Twitter users. <span class="red-queen">RedQueen</span> was able to obtain better average rank as well as higher time in the top-1 compared to the real users as well as against the current state of the art. </li>
+        <li>Extending the one item algorithm to multiple items.</li>
+        <li>Using the power-law decay model.</li>
+        <li>Proof of optimality of the solution.</li>
+        <li>Experiments comparing performance of learners who followed <span class="memorize">Memorize</span> like scheduling and other baselines like Uniform spacing or Threshold based scheduling.</li>
       </ul>
 
-
-      <h2>The Name <em class="red-queen">RedQueen</em></h2>
-
-      <p>
-        The name is taken from the <a href="https://en.wikipedia.org/wiki/Red_Queen">Red Queen's race</a>
-        incident in <a href="https://en.wikipedia.org/wiki/Lewis_Carroll">Lewis Carroll</a>'s
-        book <a href="https://en.wikipedia.org/wiki/Through_the_Looking-Glass">Through the Looking Glass</a>.
-        In particular, the Queen's quote:
-      </p>
-
-      <div class="epigraph">
-        <blockquote>
-          "Now, here, you see, it takes all the running you can do, to keep in the same place."
-          <footer>Red Queen</footer>
-        </blockquote>
-      </div>
 
       <h2>Authors</h2>
 
       <p>
+      The authors of <span class="memorize">Memorize</span> are <a href="http://www.btabibian.com/">Behzad Tabibian</a>, <a href="https://musicallyut.in">Utkarsh Upadhyay</a>, <a href="http://cse.iitkgp.ac.in/~abird/">Abir De</a>, <a href="https://azarezade.github.io/">Ali Zarezade</a>, <a href="https://is.tuebingen.mpg.de/de/people/bs">Bernhard Schölkopf</a> and <a href="https://people.mpi-sws.org/~manuelgr/">Manuel Gomez-Rodriguez</a>.
+
       The webpage was created by <a href="https://musicallyut.in">Utkarsh Upadhyay</a>.
-      The other authors of <span class="red-queen">RedQueen</span> are <a href="https://azarezade.github.io/">Ali Zarezade</a>, <a href="http://sharif.edu/~rabiee/">Hamid R. Rabiee</a>, and <a href="https://people.mpi-sws.org/~manuelgr/">Manuel Gommez-Rodriguez</a>.
       </p>
     </section>
 
@@ -367,7 +256,7 @@
     <section class="small-font">
       <h3>Acknowledgements</h3>
       <p>
-        The <em class="red-queen">RedQueen</em> icon was made by <a href="http://www.flaticon.com/authors/zlatko-najdenovski" title="Zlatko Najdenovski">Zlatko Najdenovski</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>. It is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>.
+        The <em class="red-queen">Memorize</em> icon was made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>. It is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>.
 
         <!-- Other icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> are licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div> -->
       </p>
@@ -376,8 +265,8 @@
     <section>
       <h3>Source code</h3>
       <ul>
-        <li><a href="https://github.com/Networks-Learning/RedQueen"><i class="fa fa-github"></i>Networks-Learning/RedQueen</a></li>
-        <li><a href="https://github.com/Networks-Learning/RedQueen-website"><i class="fa fa-github"></i>Networks-Learning/RedQueen-website</a></li>
+        <li><a href="https://github.com/Networks-Learning/Memorize"><i class="fa fa-github"></i>Networks-Learning/Memorize</a></li>
+        <li><a href="https://github.com/Networks-Learning/Memorize-website"><i class="fa fa-github"></i>Networks-Learning/Memorize-website</a></li>
       </ul>
     </section>
   </article>
