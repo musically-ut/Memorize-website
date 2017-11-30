@@ -57,7 +57,7 @@
         It is <a href="https://www.gwern.net/Spaced-repetition">well known</a> that
         repeated and spaced reviews of knowledge is necessary for improving
         retention.
-        However, it is unclear what is the best schedule for reviews is. Several
+        However, it is unclear what is the best schedule for reviewing. Several
         heuristics have been suggested, but they lack guarantees of optimality.
           <label class="margin-toggle sidenote-number" for="sn-reviewing"></label>
           <input id="sn-reviewing" class="margin-toggle" type="checkbox">
@@ -82,9 +82,11 @@
             Depending on the size of the dataset, these parameters can be
             user-specific, item-specific, or even user-item specific.
           </span>
-        Our algorithm will determine the next-reviewing time. The learner will
-        be <em>tested</em> at that time to see if he can recall the item and we
-        will update our next-reviewing time based on that information.
+
+        Our algorithm will determine the time the item is to be reviewed by the
+        learner. The learner will be <em>tested</em> at that time to see if he
+        can recall the item and our algorithm will update our next-reviewing
+        time based on that information, <em>adapting</em> to the user.
       </p>
 
       <p>
@@ -117,7 +119,7 @@
 
       <p>
         In the exponential forgetting curve model of memory, we assume that
-        probability of recall \( m(t) \) of an item immediate after a review is
+        probability of recall \( m(t) \) of the item immediately after a review is
         \( 1 \). Then, as the name suggests, the probability of recall
         \( m(t) \) decays exponentially with a forgetting rate
         \( n(t) \), which depends on the past reviews and the item difficulty:
@@ -152,16 +154,17 @@
       <h2>Methodology</h2>
 
       <p>
-        Contrary to the previous approaches which directly produce the optimal
-        time to review either by discretizing time into fixed slots (e.g. hours
-        or days) or by using a <em>thresholding</em> based strategy (which schedules
-        review just when the recall probability is about to fall under a threshold),
-        we produce the optimal <em>rate</em> of reviewing.
+        Previous approaches usually directly attempt to produce the optimal
+        time to review either by discretizing time into fixed sized slots (e.g. hours or days)
+        or by using a <em>thresholding</em> based strategy (which schedules a
+        review just when the recall probability falls under a fixed threshold).
+        However, instead of optimizing for the exact time of review, we will aim
+        at uncovering the optimal <em>rate</em> of reviewing.
       </p>
 
       <p>
-        This will allow us to formulate the problem as a <a href="shttps://en.wikipedia.org/wiki/Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation#Extension_to_stochastic_problems">stochastic control problem.</a>
-        However, before that, we have to choose a loss function.
+        This change will allow us to formulate the discovery of the optimal reviewing schedule as a <a href="shttps://en.wikipedia.org/wiki/Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation#Extension_to_stochastic_problems">stochastic control problem.</a>
+        However, before that, we have to choose a loss function which the optimal reviewing schedule ought to minimize.
       </p>
 
       <p>
@@ -184,7 +187,7 @@
 
       <p>
         We integrate the this loss function over the experiment interval
-        \( [0, T] \) and, since the reviewing times are stochastic, we attempt
+        \( (0, T] \) and, since the reviewing times are stochastic, we attempt
         to find the reviewing rate \( u(t) \) for the item which minimizes the
         expectation of the integral.
       </p>
@@ -207,9 +210,9 @@
       <p>
         This function states that the rate at which the item must be reviewed
         (i.e. the <em>urgency</em> of reviewing), should be proportional to how
-        <em>close</em> the learner is about to forgetting that item. Hence, the
-        <em>urgency</em> to review increases as the learner gets closer to
-        forgetting it. If the user remembers the item perfectly, i.e.
+        <em>close</em> the learner is to forgetting that item. Hence, the
+        <em>urgency</em> to review increases as the recall rate \( m(t) \) drops.
+        If the user remembers the item perfectly, i.e.
         \( m(t) = 1 \), the rate at which reviews will happen will be 0, i.e.
         no reviews will be scheduled.
 
@@ -241,10 +244,10 @@
       <p>
         To evaluate our scheduling, we used the dataset made available at
         <a href="https://github.com/duolingo/halflife-regression" style="display:inline-block"><i class="fa fa-github"></i> duolingo/halflife-regression</a>.
-        First we determine <em>how close</em> a given schedule is to <span class="memorize">Memorize</span>,
+        First, we determine <em>how close</em> a given schedule is to <span class="memorize">Memorize</span>,
         or any of the baselines, and then we determine what the performance of
         the people who follow each scheduling strategy most closely, i.e. are
-        in the top 25%-quantile of using that particular strategy.
+        in the top 25%-quantile of using that particular strategy by likelihood.
       </p>
 
       <figure>
