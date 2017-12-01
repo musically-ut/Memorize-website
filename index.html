@@ -110,6 +110,18 @@
           </span>
       </p>
 
+      <figure>
+        <label class="margin-toggle" for="memory-model">⊕</label>
+        <input id="memody-model" class="margin-toggle" type="checkbox">
+        <span class="marginnote">
+          An example of how the probability of recall may change with time.
+          As soon as a review happens, the recall probability jumps to \( 1 \).
+          It rate of decay depends on the forgetting rate \( n(t) \).
+        </span>
+        <img class="full-width" src="img/memory-model.png" alt="Samples of schedules">
+      </figure>
+
+
       <p>
         We will assume that the probability of recall follows the analytically
         simple exponential forgetting curve model. In our paper, we have extended the
@@ -162,6 +174,18 @@
         at uncovering the optimal <em>rate</em> of reviewing.
       </p>
 
+      <figure>
+        <label class="margin-toggle" for="intensity-func">⊕</label>
+        <input id="intensity-func" class="margin-toggle" type="checkbox">
+        <span class="marginnote">
+          The relationship between intensity \( u(t) \) and the number of reviews \( N(t) \).
+          When the intensity is higher, the events happen with a <em>higher rate</em>, or
+          more frequently.
+        </span>
+        <img class="full-width" src="img/intensity.png" alt="Intensity function and number of events.">
+      </figure>
+
+
       <p>
         This change will allow us to formulate the discovery of the optimal reviewing schedule as a <a href="shttps://en.wikipedia.org/wiki/Hamilton%E2%80%93Jacobi%E2%80%93Bellman_equation#Extension_to_stochastic_problems">stochastic control problem.</a>
         However, before that, we have to choose a loss function which the optimal reviewing schedule ought to minimize.
@@ -203,7 +227,7 @@
         Finally, on solving the PDE, we arrive at the following elegant solution:
 
         $$
-        \overbrace{u(t)}^{\text{reviewing intensity}} = q^{-\frac{1}{2}}\,\underbrace{(1 - m(t))}_{\text{Prob. of forgetting}}
+        \overbrace{u(t)}^{\text{reviewing intensity}} = q^{-{1}/{2}}\,\underbrace{(1 - m(t))}_{\text{Prob. of forgetting}}
         $$
       </p>
 
@@ -218,7 +242,7 @@
 
         Similarly, if the user has completely forgotten the item, i.e.
         \( m(t) = 0 \), the learner will see review events with rate
-        \( q^{-\frac{1}{2}} \) per unit of time.
+        \( q^{-{1}/{2}} \) per unit of time.
       </p>
 
       <p>
@@ -236,7 +260,7 @@
         to determine when exactly should the next post be made. This can be done
         easily using
         <a href="https://en.wikipedia.org/wiki/Poisson_point_process#Thinning"><em>thinning</em> of Poisson process</a>
-        because we know what the maximum reviewing intensity is, i.e. \( q^{-\frac{1}{2}} \).
+        because we know what the maximum reviewing intensity is, i.e. \( q^{-{1}/{2}} \).
       </p>
 
       <h2 id="evaluation">Evaluation</h2>
