@@ -3,6 +3,8 @@
 build:
 	mkdir -p build
 	cp favicon.ico index.html build/
+	mkdir -p build/docs
+	cp docs/*  build/docs/
 	mkdir -p build/css
 	cp css/*.css  build/css/
 	rsync -r css/et-book  build/css/
